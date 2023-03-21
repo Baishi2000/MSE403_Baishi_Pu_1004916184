@@ -230,11 +230,15 @@ def supervised_drop(df, corr_threshold=0.85, must = [], exception = [], color_sc
     
     return df, to_drop
 
-def plot_yang(df, plot_title, color_label = None, colorbar = True, cmap = 'viridis'):
+def plot_yang(df, plot_title, color_label = None, cbar_label = None, cmap = plt.cm.RdYlBu):
     '''This function takes a dataframe with at least the following columns:
-    Yang omega, Yang delta, and MaxFWHM. 
-    
-    It plots the Yang delta vs Yang omega, and color the scatter by MaxFWHM
+    Yang omega, Yang delta. And plot the Omega vs Delta scatter plot.
+    Input:
+    df: a dataframe with at least Yang omega and Yang delta
+    plot_title: the title of the plot
+    color_label: an array used to color the scatter plot
+    cbar_label: the label of the colorbar
+    cmap: the color scheme of the scatter plot
     '''
     
     # We can choose to color the scatter by either:
@@ -246,7 +250,7 @@ def plot_yang(df, plot_title, color_label = None, colorbar = True, cmap = 'virid
     else:
         color = df['MaxFWHM'] # by default (MaxFWHM) 
     
-    element = plt.scatter(df['Yang delta'], df['Yang omega'], 
+    scatter = plt.scatter(df['Yang delta'], df['Yang omega'], 
                           s = 5, c=color, alpha = 1, cmap=cmap)
     # set the y axis to log scale
     plt.yscale('log')
@@ -256,8 +260,10 @@ def plot_yang(df, plot_title, color_label = None, colorbar = True, cmap = 'virid
     plt.ylabel('Yang omega')
     # ax.colorbar(mappable = None, label='Predicted MaxFWHM', ax=ax)
 
-    if colorbar:
-        plt.colorbar(element)
+    if cbar_label is not None:
+        plt.colorbar(scatter)
+        # add colorbar label
+        plt.clabel(cbar_label)
 
 def pca_plot(X, title, n_comp, standardize = True, y_log = False, color_label = None, return_scree = False):
     '''return the PCA plot of X, and return X in reduced dimensionality
@@ -592,6 +598,120 @@ def CrossValidate(estimator, X, y, task_type, splitter, cv_label = None, title =
         y_hat = estimator.predict(X_test_std)
 
         # if the task is classification, plot the confusion matrix:
+        if task_type == 'classification':
+            # train error
+            train_ax = axs[0, i]
+            ConfusionMatrixDisplay.from_estimator(estimator, X_train_std, y_train, ax = train_ax, cmap = 'binary')
+            train_ax.set_title('Train Err, Split #'+ str(i+1))
+
+            # validation error
+            val_ax = axs[1, i]
+            ConfusionMatrixDisplay.from_estimator(estimator, X_test_std, y_test, ax = val_ax)
+            val_ax.set_title('Val. Err, Split #'+ str(i+1))
+            
+            auc = roc_auc_score(y_test, y_hat)
+            print('Val. AUC at split', str(i+1), auc)
+            ax_roc = axs2
+            RocCurveDisplay.from_estimator(estimator, X_test_std, y_test, ax=ax_roc, name = 'split' + str(i+1))
+            roc_title = 'ROC of ' + str(type(estimator).__name__) + ', split by ' + str(type(splitter).__name__)
+            ax_roc.set_title(roc_title)
+
+        elif task_type == 'regression':
+            # here not using ax to accomodatate the parity_plot() function
+            # plot the parity plot
+            train_ax = axs[0, i]
+            y_train_hat = estimator.predict(X_train_std)
+            parity_plot(y_train, y_train_hat, ax = train_ax, title = 'Train Err, Split #'+ str(i+1))
+
+            ### make validation R2 plots
+            val_ax = axs[1, i]
+            parity_plot(y_test, y_hat, ax = val_ax, title = 'Val Err, Split #'+ str(i+1))
+
+    fig.suptitle(title, fontsize=20)
+    fig.tight_layout()
+    fig.show()
+
+from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
+def logistic_preserve(X, y, n_features, Cs = np.logspace(-5, 0, 100), splitter = ShuffleSplit(
+        n_splits=5, test_size=0.2, random_state=0)):
+    '''Returns the index of features are of the top n_feature important
+    Inputs:
+    X: ndarray of full features
+    y: target values
+    n_features: the number of features to preserve
+    Cs: a list of C values to try
+    splitter: splitter object which define the split of LassoCV
+
+    Outputs:
+    an ndarray of indexes where feature importance squashed to zero
+    '''
+    # Standardize the X using the entire X
+    scaler = StandardScaler()
+    X_std = scaler.fit_transform(X)
+
+
+    lr_CV = LogisticRegressionCV(Cs = Cs,cv=splitter)
+    lr_CV.fit(X_std, y)
+
+    C_opt = lr_CV.C_[0]
+    # Print the optimal alpha value
+    print("Optimal C:", C_opt)
+
+    # Fit Lasso with the optimal alpha value to the full training set
+    lr = LogisticRegression(C = C_opt)
+    lr.fit(X_std, y)
+
+    feature_importances = abs(lr.coef_.ravel())
+
+    # Find the indices of the top k features
+    top_k_indices = feature_importances.argsort()[-n_features:]
+
+    print('before LogisticReg there are ', X.shape[1], 'features')
+    print('after LogisticReg there are ', len(top_k_indices), 'features')
+
+    return top_k_indices
+
+'''ASSIGNMENT 9 FUNCTIONS'''
+
+def SearchPara(estimator, X, y, parameters, task_type, splitter, cv_label = None, title = ''):
+    '''plot a series of parity plots/Confusion Matrix/ROC curves from cross validation. Data is raw and not standardized.
+
+    estimator: model (don't need to be trained) object such as ElasticNet (regressor), LDA (classifier) that can .fit() & .predict()
+    X: the features
+    y: the target
+    parameters: a dictionary of parameters to search through
+    splitter: initialized split method, such as ShuffleSplit
+    task_type: 'regression' or 'classification'
+    cv_label: data label, in case of stratified split/loco split
+    
+    CAN we modify this to a classfier model?'''
+    if isinstance(splitter, LeaveOneGroupOut): # if doing a LOCO split
+        n = splitter.get_n_splits(X, y, groups = cv_label)
+    else: # any other split
+        n = splitter.get_n_splits(X, y) 
+
+    # initialize the figure. 
+    if task_type == 'regression':
+        fig, axs = plt.subplots(2, n, figsize=(10, 20/n))
+    elif task_type == 'classification':
+        fig, axs = plt.subplots(2, n, figsize=(10, 20/n))
+        fig2, axs2 = plt.subplots(1, 1, figsize=(6, 6))
+
+    # LOOP THROUGH EACH SPLIT
+    for i, (train_index, test_index) in enumerate(splitter.split(X, y, cv_label)): 
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        X_train_std = StandardScaler().fit_transform(X_train)
+        X_test_std = StandardScaler().fit_transform(X_test)
+
+        # fit the model
+        estimator.fit(X_train_std, y_train)
+
+        # predict on test and train set
+        y_hat = estimator.predict(X_test_std)
+
+        # if the task is classification, report the score under the current parameters
         if task_type == 'classification':
             # train error
             train_ax = axs[0, i]
