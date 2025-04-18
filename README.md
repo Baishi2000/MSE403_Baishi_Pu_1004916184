@@ -9,4 +9,4 @@ Each assignment focuses on a different step / tool in data analysis, mostly in a
 - **Assi 8**: building decision tree & random forest classifiers, tuned hyperparameters by minimizing ROC AUC during gridsearch-CV. Visualized feature importance by plotting decision tree and calculating each feature's gini index.
 - **Final**:  
   Part I: building a LASSO tuned and trained on partially corrupt experimental data to output the correct data set.  
-  Part II: Building an active learning algorithm which employs a customized acquisition policy that can be tuned to behave like 1. random sampling 2. sample by exploitation 3. sample by upper confidence bound
+  Part II: Building an active learning algorithm (GPR used here) to find the global optima using the least amount of sampling token. The algorithm uses a customized acquisition policy that can be tuned to behave like 1. random sampling 2. sample by exploitation 3. sample by upper confidence bound, with their performance compared visually. The algorithm's updated belief after each round of sampling is visualized and compiled into GIFs.
