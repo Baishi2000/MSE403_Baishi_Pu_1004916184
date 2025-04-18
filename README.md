@@ -7,6 +7,6 @@ Each assignment focuses on a different step / tool in data analysis, mostly in a
 - **Assi 6**: using classification (LDA) to predict alloy mixtures' glass formability & quantify prediction confidence.
 - **Assi 7**: using regularized linear models (LASSO) trained on partial diffraction data to predict the FWHM over the entire quanternary space.
 - **Assi 8**: building decision tree & random forest classifiers, tuned hyperparameters by minimizing ROC AUC during gridsearch-CV. Visualized feature importance by plotting decision tree and calculating each feature's gini index.
-- **Final**:
-  Part I: building a LASSO tuned and trained on partially corrupt experimental data to output the correct data set.
+- **Final**:  
+  Part I: building a LASSO tuned and trained on partially corrupt experimental data to output the correct data set.  
   Part II: Building an active learning algorithm which employs a customized acquisition policy that can be tuned to behave like 1. random sampling 2. sample by exploitation 3. sample by upper confidence bound
