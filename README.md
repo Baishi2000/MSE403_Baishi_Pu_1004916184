@@ -1,5 +1,5 @@
 ## This is a repo of my Materials Data Analysis course projects. 
-- each assignment focuses on a different step / tool of data analysis, mostly in a materials science setting.
+- each assignment focuses on a different step / tool in data analysis, mostly in a materials science setting.
   - **Assi 2**: read and extracting high-level summary from excel to dataframe; data cleaning, feature correlation analysis and feature selection.
   - **Assi 3**: slicing strings to normalize chemical formulas, import online datasets and and perform cleaning.
   - **Assi 4**: unsupervised learning (clustering) to map alloy mixtures onto phase diagrams, using raw diffraction data & featurizers.
